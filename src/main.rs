@@ -1,6 +1,8 @@
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use clap::{Args, Parser, Subcommand};
-use std::{fs, path::PathBuf, process::Command};
+use std::{ffi::OsString, fmt, fs, io, path::PathBuf, process};
+
+const CONFIG_NAME: &str = "project-manager";
 
 #[derive(Parser)]
 #[command(author, version, about, long_about=None)]
@@ -37,7 +39,64 @@ struct CdArgs {
     project_name: String,
 }
 
+#[derive(Debug)]
+enum Error {
+    CouldNotDetermineConfigLocation(Vec<String>),
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self {
+            Error::CouldNotDetermineConfigLocation(tried_locations) => {
+                write!(
+                    f,
+                    "Could not determine location for config directory!\nTried:\n"
+                )?;
+                for loc in tried_locations.iter() {
+                    write!(f, "  - {}\n", loc)?;
+                }
+                Ok(())
+            }
+        }
+    }
+}
+
+impl std::error::Error for Error {}
+
+fn try_init_config_dir() -> Result<()> {
+    // Priority which directory should be used for config
+    // 1. $XDG_CONFIG_HOME/<CONFIG_NAME>
+    // 2. $HOME/.config/<CONFIG_NAME>
+
+    fn empty_os_string_to_none(os_str: OsString) -> Option<PathBuf> {
+        if os_str.is_empty() {
+            None
+        } else {
+            Some(os_str.into())
+        }
+    }
+
+    let config_location: PathBuf = std::env::var_os("XDG_CONFIG_HOME")
+        .and_then(empty_os_string_to_none)
+        .or(std::env::var_os("HOME").and_then(empty_os_string_to_none))
+        .map(|path| path.join(CONFIG_NAME))
+        .ok_or(Error::CouldNotDetermineConfigLocation(vec![
+            format!("$XDG_CONFIG_HOME/{}", CONFIG_NAME),
+            format!("$HOME/{}", CONFIG_NAME),
+        ]))?;
+
+    match fs::metadata(&config_location) {
+        Ok(_) => Ok(()),
+        Err(ref err) if err.kind() == io::ErrorKind::PermissionDenied => {
+            Err(anyhow!("No Permission for '{}'", config_location.display()))
+        }
+        Err(ref err) if err.kind() == io::ErrorKind::NotFound => Err(anyhow!("not found")),
+        Err(_) => Err(anyhow!("")),
+    }
+}
+
 fn main() -> Result<()> {
+    try_init_config_dir()?;
     let cli = Cli::parse();
     let project_dir_path = PathBuf::from(cli.project_dir_path).canonicalize()?;
 
@@ -60,7 +119,7 @@ fn main() -> Result<()> {
             fs::create_dir(&project_dir)
                 .with_context(|| format!("Cannot create project '{}'", &args.project_name))?;
             if args.generator == "git" {
-                Command::new("git")
+                process::Command::new("git")
                     .arg("init")
                     .arg(project_dir)
                     .output()
