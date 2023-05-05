@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Context, Result};
 use clap::{Args, Parser, Subcommand};
-use std::{ffi::OsString, fmt, fs, io, path::PathBuf, process};
+use std::{ffi::OsString, fs, io, path::PathBuf, process};
 
 const CONFIG_NAME: &str = "project-manager";
 
@@ -8,7 +8,7 @@ const CONFIG_NAME: &str = "project-manager";
 #[command(author, version, about, long_about=None)]
 struct Cli {
     /// Directory where projects are stored
-    #[arg(short, long = "projects")]
+    #[arg(short, long = "projects_root")]
     project_dir_path: std::path::PathBuf,
 
     #[command(subcommand)]
@@ -27,7 +27,7 @@ struct NewArgs {
     /// Name of new project
     project_name: String,
 
-    /// Generator used for creating new project (default=git)
+    /// Generator used for creating new project
     #[arg(short, long = "generator", default_value = "git")]
     generator: String,
 }
@@ -39,34 +39,37 @@ struct CdArgs {
     project_name: String,
 }
 
-#[derive(Debug)]
-enum Error {
-    CouldNotDetermineConfigLocation(Vec<String>),
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match &self {
-            Error::CouldNotDetermineConfigLocation(tried_locations) => {
-                write!(
-                    f,
-                    "Could not determine location for config directory!\nTried:\n"
-                )?;
-                for loc in tried_locations.iter() {
-                    write!(f, "  - {}\n", loc)?;
-                }
-                Ok(())
-            }
-        }
-    }
-}
-
-impl std::error::Error for Error {}
-
 fn try_init_config_dir() -> Result<()> {
     // Priority which directory should be used for config
     // 1. $XDG_CONFIG_HOME/<CONFIG_NAME>
     // 2. $HOME/.config/<CONFIG_NAME>
+
+    // config_dir/
+    //      - config.yaml
+    //      - projects/
+    //          - coocook/
+    //              - backup/
+    //                  -
+    //              - publish/
+    //                  -
+    //      - commands/ <---- maybe create DSL
+    //          - publish-git/
+    //              - danger.sh
+    //              - cleanup.sh
+    //          - publish-mycustom
+    //          - new-git
+    //          - new-perl
+    //              - 00-mkdir.sh
+    //              - 01-git-init.sh
+    //              - 02-init-cpanfile.sh
+    //      =============================
+    //      - publish/
+    //          - git/
+    //          - dockerhub/
+    //          - gitrelease/
+    //      - generate/
+    //          - git/
+    //                  - 00-init.sh
 
     fn empty_os_string_to_none(os_str: OsString) -> Option<PathBuf> {
         if os_str.is_empty() {
@@ -90,7 +93,13 @@ fn try_init_config_dir() -> Result<()> {
         Err(ref err) if err.kind() == io::ErrorKind::PermissionDenied => {
             Err(anyhow!("No Permission for '{}'", config_location.display()))
         }
-        Err(ref err) if err.kind() == io::ErrorKind::NotFound => Err(anyhow!("not found")),
+        Err(ref err) if err.kind() == io::ErrorKind::NotFound => fs::create_dir(&config_location)
+            .with_context(|| {
+                format!(
+                    "Failed to create config directory at '{}'",
+                    config_location.display()
+                )
+            }),
         Err(_) => Err(anyhow!("")),
     }
 }
