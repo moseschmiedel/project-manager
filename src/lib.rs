@@ -1,3 +1,1 @@
-use crate::error::Error;
-
-mod error;
+pub mod error;

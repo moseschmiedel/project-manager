@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Context, Result};
 use clap::{Args, Parser, Subcommand};
+use project_manager::error::Error;
 use std::{ffi::OsString, fs, io, path::PathBuf, process};
 
 const CONFIG_NAME: &str = "project-manager";
