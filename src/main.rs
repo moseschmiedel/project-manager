@@ -117,7 +117,7 @@ fn main() -> Result<()> {
                 let path = dir_entry.unwrap().path().to_owned();
                 if path.is_dir() {
                     let name = path.file_name().unwrap().to_str().unwrap().to_owned();
-                    if name == args.project_name {
+                    if name == args.project_name || format!("{name}/") == args.project_name {
                         println!("{}", path.as_path().display());
                     }
                 }
