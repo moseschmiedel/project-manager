@@ -19,6 +19,8 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     Cd(CdArgs),
+    ListProjects,
+    Clone(CloneArgs),
     New(NewArgs),
 }
 
@@ -38,6 +40,19 @@ struct NewArgs {
 struct CdArgs {
     /// Project to switch to
     project_name: String,
+}
+
+#[derive(Args)]
+#[command(author, version, about = "Clone project from specified git URL", long_about = None)]
+struct CloneArgs {
+    /// git URL to clone from
+    url: String,
+    /// Parent directory to clone project into
+    #[arg(short, long = "project-name")]
+    project_name: Option<String>,
+    /// Parent directory to clone project into
+    #[arg(short, long = "parent-dir")]
+    directory: Option<std::path::PathBuf>,
 }
 
 fn try_init_config_dir() -> Result<()> {
@@ -124,6 +139,17 @@ fn main() -> Result<()> {
             }
             Ok(())
         }
+        Some(Commands::ListProjects) => {
+            let project_home_dir = project_dir_path.read_dir()?;
+            for dir_entry in project_home_dir {
+                let path = dir_entry.unwrap().path().to_owned();
+                if path.is_dir() {
+                    println!("{}", path.as_path().file_name().unwrap().to_string_lossy());
+                }
+            }
+
+            Ok(())
+        }
         Some(Commands::New(args)) => {
             let project_dir = project_dir_path.join(&args.project_name);
             fs::create_dir(&project_dir)
@@ -138,6 +164,25 @@ fn main() -> Result<()> {
                 Ok(())
             }
             .with_context(|| format!("Generator {} could not be executed", args.generator))?;
+            Ok(())
+        }
+        Some(Commands::Clone(args)) => {
+            // TODO: Maybe do some checks on the specified URL before passing it
+            // to git
+            let mut git = process::Command::new("git");
+            git.current_dir(args.directory.clone().unwrap_or(project_dir_path))
+                .arg("clone")
+                .arg(args.url.clone());
+
+            match &args.project_name {
+                None => (),
+                Some(project_name) => {
+                    git.arg(project_name);
+                }
+            };
+
+            let mut handle = git.spawn()?;
+            handle.wait()?;
             Ok(())
         }
         None => Ok(()),
