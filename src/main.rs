@@ -9,7 +9,7 @@ const CONFIG_NAME: &str = "project-manager";
 #[command(author, version, about, long_about=None)]
 struct Cli {
     /// Directory where projects are stored
-    #[arg(short, long = "projects_root")]
+    #[arg(short, long = "projects-root")]
     project_dir_path: std::path::PathBuf,
 
     #[command(subcommand)]
