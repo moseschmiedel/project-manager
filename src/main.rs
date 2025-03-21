@@ -22,6 +22,11 @@ enum Commands {
     ListProjects,
     Clone(CloneArgs),
     New(NewArgs),
+    ListCommands,
+}
+
+impl Commands {
+    const NAMES: &'static [&'static str] = &["cd", "list-projects", "clone", "new", "list-commands"];
 }
 
 #[derive(Args)]
@@ -183,6 +188,12 @@ fn main() -> Result<()> {
 
             let mut handle = git.spawn()?;
             handle.wait()?;
+            Ok(())
+        }
+        Some(Commands::ListCommands) => {
+            for &c in Commands::NAMES {
+                println!("{c}");
+            }
             Ok(())
         }
         None => Ok(()),
