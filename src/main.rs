@@ -97,11 +97,11 @@ fn try_init_config_dir() -> Result<()> {
 
     let config_location: PathBuf = std::env::var_os("XDG_CONFIG_HOME")
         .and_then(empty_os_string_to_none)
-        .or(std::env::var_os("HOME").and_then(empty_os_string_to_none))
+        .or(std::env::var_os("HOME").and_then(empty_os_string_to_none).map(|path| path.join(".config")))
         .map(|path| path.join(CONFIG_NAME))
         .ok_or(Error::CouldNotDetermineConfigLocation(vec![
             format!("$XDG_CONFIG_HOME/{}", CONFIG_NAME),
-            format!("$HOME/{}", CONFIG_NAME),
+            format!("$HOME/.config/{}", CONFIG_NAME),
         ]))?;
 
     match fs::metadata(&config_location) {
