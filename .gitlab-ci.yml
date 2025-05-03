@@ -1,0 +1,22 @@
+stages:
+  - lint
+  - test
+
+check-fmt:
+  stage: lint
+  image: nixpkgs/nix:nixos-24.11
+  script: nix develop --command cargo fmt --check
+  parallel:
+    matrix:
+      - NIXPKGS_CHANNEL:
+        - nixos-24.11
+
+
+run:
+  stage: test
+  image: nixpkgs/nix:nixos-24.11
+  script: nix develop --command cargo test
+  parallel:
+    matrix:
+      - NIXPKGS_CHANNEL:
+        - nixos-24.11
