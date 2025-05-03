@@ -5,6 +5,7 @@ pkgs.mkShell {
         cargo
         gcc
         rustfmt
+        rust-analyzer
         clippy
     ];
 
