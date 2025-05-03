@@ -4,7 +4,7 @@ stages:
 
 check-fmt:
   stage: lint
-  image: nixpkgs/nix:nixos-24.11
+  image: nixpkgs/nix-flakes:nixos-24.11
   script: nix develop --command cargo fmt --check
   parallel:
     matrix:
@@ -14,7 +14,7 @@ check-fmt:
 
 run:
   stage: test
-  image: nixpkgs/nix:nixos-24.11
+  image: nixpkgs/nix-flakes:nixos-24.11
   script: nix develop --command cargo test
   parallel:
     matrix:
