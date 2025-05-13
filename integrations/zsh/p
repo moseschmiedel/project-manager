@@ -58,8 +58,7 @@ complete -F _p_completions p
 
 
 p() {
-    if [ \( -n "$1" \) -a \( "$1" == "cd" \) ]; then
-        echo $(project-manager --projects-root $PROJECT_HOME cd "$2");
+    if [[  -n "$1" && "$1" == "cd" ]]; then
         cd $(project-manager --projects-root $PROJECT_HOME cd "$2");
     else
         project-manager --projects-root $PROJECT_HOME "$@";
