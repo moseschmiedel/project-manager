@@ -1,7 +1,7 @@
 #!/bin/bash
 
 p_cd_completions() {
-    project-manager --projects-root $PROJECT_HOME list-projects
+    project-manager list-projects --projects-root $PROJECT_HOME
     #"Switch to project" | awk '{sub(rpl, "", $1); print $1}' rpl="$PROJECT_HOME/" | awk '{sub("/(?:.(?!/))*$", "", $0); print $0}'
 }
 
@@ -43,13 +43,13 @@ _p_completions() {
     fi
 
     if [ "$prev" == "p" ]; then
-        commands=$(project-manager --projects-root $PROJECT_HOME list-commands)
+        commands=$(project-manager list-commands)
         COMPREPLY=( $(compgen -W "$commands" -- ${cur}) )
         return 0
     fi
 
     if [ "$prev" == "cd" ]; then
-        projects=$(project-manager --projects-root $PROJECT_HOME list-projects)
+        projects=$(project-manager list-projects --projects-root $PROJECT_HOME)
         COMPREPLY=( $(compgen -W "$projects" -- ${cur}) )
         return 0
     fi
@@ -58,17 +58,16 @@ _p_completions() {
 
 complete -F _p_completions p
 
-supported_versions="<=0.1.1"
+supported_versions=">=0.2.0, <0.3.0"
 
 p() {
-    if [ ! project-manager supported-version "$supported_versions" ]; then
-        echo "Error: project-manager version not supported. Please upgrade to a version matching $supported_versions"
+    if ! project-manager supported-version "$supported_versions"; then
         return 1
     fi
 
     if [ \( -n "$1" \) -a \( "$1" == "cd" \) ]; then
-        cd $(project-manager --projects-root $PROJECT_HOME cd "$2");
+        cd $(project-manager cd --projects-root "$PROJECT_HOME" "$2");
     else
-        project-manager --projects-root $PROJECT_HOME "$@"
+        project-manager "$@" --projects-root "$PROJECT_HOME";
     fi
 }
