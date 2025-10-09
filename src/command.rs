@@ -3,8 +3,17 @@ use std::{fs, path::PathBuf, process};
 
 use crate::cli;
 
-pub fn cd(project_dir_path: PathBuf, args: cli::CdArgs) -> Result<()> {
-    let project_home_dir = project_dir_path.read_dir()?;
+fn parse_project_dir_path(project_dir_path: PathBuf) -> Result<PathBuf> {
+    Ok(project_dir_path.canonicalize().with_context(|| {
+        format!(
+            "Cannot canonicalize project directory path: {}",
+            project_dir_path.display()
+        )
+    })?)
+}
+
+pub fn cd(args: cli::CdArgs) -> Result<()> {
+    let project_home_dir = parse_project_dir_path(args.project_dir_path)?.read_dir()?;
     for dir_entry in project_home_dir {
         let path = dir_entry.unwrap().path().to_owned();
         if path.is_dir() {
@@ -17,8 +26,8 @@ pub fn cd(project_dir_path: PathBuf, args: cli::CdArgs) -> Result<()> {
     Ok(())
 }
 
-pub fn list_projects(project_dir_path: PathBuf) -> Result<()> {
-    let project_home_dir = project_dir_path.read_dir()?;
+pub fn list_projects(args: cli::ListProjectsArgs) -> Result<()> {
+    let project_home_dir = parse_project_dir_path(args.project_dir_path)?.read_dir()?;
     for dir_entry in project_home_dir {
         let path = dir_entry.unwrap().path().to_owned();
         if path.is_dir() {
@@ -29,8 +38,8 @@ pub fn list_projects(project_dir_path: PathBuf) -> Result<()> {
     Ok(())
 }
 
-pub fn new(project_dir_path: PathBuf, args: cli::NewArgs) -> Result<()> {
-    let project_dir = project_dir_path.join(&args.project_name);
+pub fn new(args: cli::NewArgs) -> Result<()> {
+    let project_dir = parse_project_dir_path(args.project_dir_path)?.join(&args.project_name);
     fs::create_dir(&project_dir)
         .with_context(|| format!("Cannot create project '{}'", &args.project_name))?;
     if args.generator == "git" {
@@ -46,7 +55,9 @@ pub fn new(project_dir_path: PathBuf, args: cli::NewArgs) -> Result<()> {
     Ok(())
 }
 
-pub fn clone(project_dir_path: PathBuf, args: cli::CloneArgs) -> Result<()> {
+pub fn clone(args: cli::CloneArgs) -> Result<()> {
+    let project_dir_path = parse_project_dir_path(args.project_dir_path)?;
+
     // TODO: Maybe do some checks on the specified URL before passing it
     // to git
     let mut git = process::Command::new("git");
@@ -69,6 +80,24 @@ pub fn clone(project_dir_path: PathBuf, args: cli::CloneArgs) -> Result<()> {
 pub fn list_commands() -> Result<()> {
     for &c in cli::Commands::NAMES {
         println!("{c}");
+    }
+    Ok(())
+}
+
+pub fn supported_version(args: cli::SupportedVersionArgs) -> Result<()> {
+    let version_req = semver::VersionReq::parse(&args.version_requirement).with_context(|| {
+        format!(
+            "Could not parse version requirement '{}'",
+            args.version_requirement
+        )
+    })?;
+    let version_str = env!("CARGO_PKG_VERSION");
+    if !version_req.matches(&semver::Version::parse(version_str)?) {
+        Err(anyhow::anyhow!(
+            "Version requirement '{}' is not satisfied by current version '{}'",
+            args.version_requirement,
+            version_str
+        ))?;
     }
     Ok(())
 }

@@ -58,8 +58,14 @@ _p_completions() {
 
 complete -F _p_completions p
 
+supported_versions="<=0.1.1"
 
 p() {
+    if [ ! project-manager supported-version "$supported_versions" ]; then
+        echo "Error: project-manager version not supported. Please upgrade to a version matching $supported_versions"
+        return 1
+    fi
+
     if [ \( -n "$1" \) -a \( "$1" == "cd" \) ]; then
         cd $(project-manager --projects-root $PROJECT_HOME cd "$2");
     else
