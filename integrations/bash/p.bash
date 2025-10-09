@@ -61,7 +61,8 @@ complete -F _p_completions p
 supported_versions=">=0.2.0, <0.3.0"
 
 p() {
-    if ! project-manager supported-version "$supported_versions"; then
+    if [ ! $(project-manager supported-version "$supported_versions") ]; then
+        echo "Error: project-manager version not supported. Please upgrade to a version matching $supported_versions"
         return 1
     fi
 
