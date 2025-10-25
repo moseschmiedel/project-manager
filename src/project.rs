@@ -254,7 +254,11 @@ impl Detector {
     }
 
     fn detect_filenames(&self, filenames: &[&str], dir: &Path) -> bool {
-        for entry in self.list_dir(dir) {
+        for entry in dir
+            .read_dir()
+            .expect(format!("Could not read directory: {}", dir.display()).as_str())
+        {
+            let entry = entry.unwrap();
             let filename = entry.file_name();
             let os_string = filename.to_string_lossy();
             let str = os_string.deref();
