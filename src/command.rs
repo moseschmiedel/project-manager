@@ -2,6 +2,7 @@ use anyhow::{Context, Result};
 use std::{fs, path::PathBuf, process};
 
 use crate::cli;
+use crate::project;
 
 fn parse_project_dir_path(project_dir_path: PathBuf) -> Result<PathBuf> {
     Ok(project_dir_path.canonicalize().with_context(|| {
@@ -27,13 +28,9 @@ pub fn cd(args: cli::CdArgs) -> Result<()> {
 }
 
 pub fn list_projects(args: cli::ListProjectsArgs) -> Result<()> {
-    let project_home_dir = parse_project_dir_path(args.project_dir_path)?.read_dir()?;
-    for dir_entry in project_home_dir {
-        let path = dir_entry.unwrap().path().to_owned();
-        if path.is_dir() {
-            println!("{}", path.as_path().file_name().unwrap().to_string_lossy());
-        }
-    }
+    let root = project::Detector::new(args.project_dir_path).detect();
+
+    println!("{root}");
 
     Ok(())
 }
