@@ -1,7 +1,8 @@
 use std::{
     fs::DirEntry,
     ops::Deref,
-    path::{Display, Path, PathBuf},
+    path::{Path, PathBuf},
+    sync::Arc,
 };
 
 pub struct Project {
@@ -9,7 +10,7 @@ pub struct Project {
 }
 
 impl Project {
-    pub fn new(name: String, slug: String, path: PathBuf) -> Self {
+    pub fn new(name: Arc<str>, slug: Arc<str>, path: PathBuf) -> Self {
         Project {
             info: Info { name, slug, path },
         }
@@ -29,17 +30,17 @@ impl std::fmt::Display for Project {
 }
 
 struct Info {
-    name: String,
-    slug: String,
+    name: Arc<str>,
+    slug: Arc<str>,
     path: PathBuf,
 }
 
 impl Info {
     fn parse_dir_path(dir: &Path) -> Info {
-        let name = dir.file_name().unwrap().to_str().unwrap().to_string();
+        let name = dir.file_name().unwrap().to_str().unwrap();
         Info {
-            name: name.clone(),
-            slug: name.to_lowercase().replace(' ', "-"),
+            name: name.into(),
+            slug: name.to_lowercase().replace(' ', "-").into(),
             path: dir.to_path_buf(),
         }
     }
@@ -51,7 +52,7 @@ pub struct RootNamespace {
 }
 
 impl RootNamespace {
-    pub fn new(name: String, slug: String, path: PathBuf) -> Self {
+    pub fn new(name: Arc<str>, slug: Arc<str>, path: PathBuf) -> Self {
         Self {
             info: Info { name, slug, path },
             items: Vec::new(),
@@ -60,6 +61,21 @@ impl RootNamespace {
 
     fn with_items(info: Info, items: Vec<NamespaceItem>) -> Self {
         Self { info, items }
+    }
+
+    pub fn build_project_slugs(&self) -> Vec<Arc<str>> {
+        let mut slugs = Vec::new();
+        for item in &self.items {
+            match item {
+                NamespaceItem::Project(project) => {
+                    slugs.push(project.info.slug.clone());
+                }
+                NamespaceItem::Namespace(namespace) => {
+                    slugs.extend(namespace.build_project_slugs("".into()));
+                }
+            }
+        }
+        slugs
     }
 }
 
@@ -88,11 +104,31 @@ pub struct SubNamespace {
 }
 
 impl SubNamespace {
-    pub fn new(name: String, slug: String, path: PathBuf) -> Self {
+    pub fn new(name: Arc<str>, slug: Arc<str>, path: PathBuf) -> Self {
         Self {
             info: Info { name, slug, path },
             items: Vec::new(),
         }
+    }
+
+    pub fn build_project_slugs(&self, aggregated_slug: Arc<str>) -> Vec<Arc<str>> {
+        let mut slugs = Vec::new();
+        let my_slug = if aggregated_slug.is_empty() {
+            self.info.slug.clone()
+        } else {
+            format!("{}.{}", aggregated_slug, self.info.slug).into()
+        };
+        for item in &self.items {
+            match item {
+                NamespaceItem::Project(project) => {
+                    slugs.push(format!("{}.{}", my_slug, project.info.slug).into());
+                }
+                NamespaceItem::Namespace(namespace) => {
+                    slugs.extend(namespace.build_project_slugs(my_slug.clone()));
+                }
+            }
+        }
+        slugs
     }
 
     fn with_items(info: Info, items: Vec<NamespaceItem>) -> Self {
@@ -183,8 +219,8 @@ impl Detector {
 
         RootNamespace::with_items(
             Info {
-                name: "Root".to_string(),
-                slug: "root".to_string(),
+                name: "Root".into(),
+                slug: "root".into(),
                 path: self.root,
             },
             items,

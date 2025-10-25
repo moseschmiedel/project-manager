@@ -30,7 +30,11 @@ pub fn cd(args: cli::CdArgs) -> Result<()> {
 pub fn list_projects(args: cli::ListProjectsArgs) -> Result<()> {
     let root = project::Detector::new(args.project_dir_path).detect();
 
-    println!("{root}");
+    let projects = root.build_project_slugs();
+
+    for project in projects {
+        println!("{}", project);
+    }
 
     Ok(())
 }
