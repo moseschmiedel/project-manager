@@ -1,0 +1,65 @@
+#compdef _p p
+
+function _p {
+    local line
+
+    _arguments -C \
+        "-h[Display help information]" \
+        "--help[Display help information]" \
+        "1: :(cd clone new help)" \
+        "*::arg:->args"
+
+    case $line[1] in
+        cd)
+            _p_cd
+        ;;
+        clone)
+            _p_clone
+        ;;
+        new)
+            _p_new
+        ;;
+        help)
+            _p_help
+        ;;
+    esac
+}
+
+function _p_cd {
+    local -a projects
+    projects=($(project-manager list-projects --projects-root $PROJECT_HOME))
+    _describe 'projects' projects
+}
+
+function _p_clone {
+    _arguments \
+        "1:Repository URL" \
+        "-d[Specify parent directory]:parent directory:" \
+        "--parent-dir[Specify parent directory]:parent directory:" \
+        "-p[Specify project name]:project name:" \
+        "--project-name[Specify project name]:project name:" \
+        "-h[Display help information]" \
+        "--help[Display help information]"\
+        "-V[Display version information]" \
+        "--version[Display version information]"
+}
+
+function _p_new {
+    _arguments \
+        "1:Name of the new Project" \
+        "-g[Specify the project generator]:generator:(git)" \
+        "--generator[Specify parent directory]:generator:(git)" \
+        "-h[Display help information]" \
+        "--help[Display help information]"\
+        "-V[Display version information]" \
+        "--version[Display version information]"
+}
+
+function _p_help {
+    _arguments \
+        "1:Command to get help for" \
+        "-h[Display help information]" \
+        "--help[Display help information]"\
+        "-V[Display version information]" \
+        "--version[Display version information]"
+}
