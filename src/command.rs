@@ -14,16 +14,16 @@ fn parse_project_dir_path(project_dir_path: PathBuf) -> Result<PathBuf> {
 }
 
 pub fn cd(args: cli::CdArgs) -> Result<()> {
-    let project_home_dir = parse_project_dir_path(args.project_dir_path)?.read_dir()?;
-    for dir_entry in project_home_dir {
-        let path = dir_entry.unwrap().path().to_owned();
-        if path.is_dir() {
-            let name = path.file_name().unwrap().to_str().unwrap().to_owned();
-            if name == args.project_name || format!("{name}/") == args.project_name {
-                println!("{}", path.as_path().display());
-            }
+    let root = project::Detector::new(args.project_dir_path).detect();
+
+    let projects = root.build_project_slugs();
+
+    for project in projects {
+        if project.to_string() == args.project_name {
+            println!("{}", project.fmt_path());
         }
     }
+
     Ok(())
 }
 

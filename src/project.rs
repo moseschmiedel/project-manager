@@ -17,6 +17,12 @@ impl Project {
     }
 }
 
+impl Project {
+    fn fmt_path(&self) -> String {
+        format!("{}", self.info.path.display());
+    }
+}
+
 impl std::fmt::Display for Project {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
