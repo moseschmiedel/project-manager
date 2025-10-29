@@ -16,11 +16,11 @@ fn parse_project_dir_path(project_dir_path: PathBuf) -> Result<PathBuf> {
 pub fn cd(args: cli::CdArgs) -> Result<()> {
     let root = project::Detector::new(args.project_dir_path).detect();
 
-    let projects = root.build_project_slugs();
+    let slug_paths = root.build_project_slugs();
 
-    for project in projects {
-        if project.to_string() == args.project_name {
-            println!("{}", project.fmt_path());
+    for slug_path in slug_paths {
+        if slug_path.to_string() == args.project_name {
+            println!("{}", slug_path.fmt_path());
         }
     }
 
@@ -30,10 +30,10 @@ pub fn cd(args: cli::CdArgs) -> Result<()> {
 pub fn list_projects(args: cli::ListProjectsArgs) -> Result<()> {
     let root = project::Detector::new(args.project_dir_path).detect();
 
-    let projects = root.build_project_slugs();
+    let slug_paths = root.build_project_slugs();
 
-    for project in projects {
-        println!("{}", project);
+    for slug_path in slug_paths {
+        println!("{}", slug_path);
     }
 
     Ok(())

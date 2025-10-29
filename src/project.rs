@@ -17,12 +17,6 @@ impl Project {
     }
 }
 
-impl Project {
-    fn fmt_path(&self) -> String {
-        format!("{}", self.info.path.display());
-    }
-}
-
 impl std::fmt::Display for Project {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -52,6 +46,32 @@ impl Info {
     }
 }
 
+pub struct SlugPath {
+    slug: Arc<str>,
+    path: Arc<Path>,
+}
+
+impl std::fmt::Display for SlugPath {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.slug)
+    }
+}
+
+impl SlugPath {
+    pub fn fmt_path(&self) -> String {
+        format!("{}", self.path.display())
+    }
+}
+
+impl From<&Project> for SlugPath {
+    fn from(project: &Project) -> Self {
+        SlugPath {
+            slug: project.info.slug.clone(),
+            path: Arc::from(project.info.path.as_path()),
+        }
+    }
+}
+
 pub struct RootNamespace {
     info: Info,
     items: Vec<NamespaceItem>,
@@ -69,19 +89,19 @@ impl RootNamespace {
         Self { info, items }
     }
 
-    pub fn build_project_slugs(&self) -> Vec<Arc<str>> {
-        let mut slugs = Vec::new();
+    pub fn build_project_slugs(&self) -> Vec<SlugPath> {
+        let mut slug_paths = Vec::new();
         for item in &self.items {
             match item {
                 NamespaceItem::Project(project) => {
-                    slugs.push(project.info.slug.clone());
+                    slug_paths.push(project.into());
                 }
                 NamespaceItem::Namespace(namespace) => {
-                    slugs.extend(namespace.build_project_slugs("".into()));
+                    slug_paths.extend(namespace.build_project_slugs("".into()));
                 }
             }
         }
-        slugs
+        slug_paths
     }
 }
 
@@ -117,8 +137,8 @@ impl SubNamespace {
         }
     }
 
-    pub fn build_project_slugs(&self, aggregated_slug: Arc<str>) -> Vec<Arc<str>> {
-        let mut slugs = Vec::new();
+    pub fn build_project_slugs(&self, aggregated_slug: Arc<str>) -> Vec<SlugPath> {
+        let mut slug_paths = Vec::new();
         let my_slug = if aggregated_slug.is_empty() {
             self.info.slug.clone()
         } else {
@@ -127,14 +147,18 @@ impl SubNamespace {
         for item in &self.items {
             match item {
                 NamespaceItem::Project(project) => {
-                    slugs.push(format!("{}.{}", my_slug, project.info.slug).into());
+                    let slug = format!("{}.{}", my_slug, project.info.slug);
+                    slug_paths.push(SlugPath {
+                        slug: slug.into(),
+                        path: Arc::from(project.info.path.as_path()),
+                    });
                 }
                 NamespaceItem::Namespace(namespace) => {
-                    slugs.extend(namespace.build_project_slugs(my_slug.clone()));
+                    slug_paths.extend(namespace.build_project_slugs(my_slug.clone()));
                 }
             }
         }
-        slugs
+        slug_paths
     }
 
     fn with_items(info: Info, items: Vec<NamespaceItem>) -> Self {
